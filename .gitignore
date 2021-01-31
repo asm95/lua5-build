@@ -1,0 +1,5 @@
+# sources will be downloaded from the internet and compiled here
+src
+lib
+dist
+include
