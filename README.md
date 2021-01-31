@@ -1,4 +1,4 @@
-### Introuction
+### Introduction
 
 Repository containing a script to compile Lua 5.3.6 in Windows. It is based of `@alain-riedinger`'s [script](https://github.com/alain-riedinger/lua53/blob/master/src/Build-lua.cmd).
 
