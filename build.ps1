@@ -7,10 +7,7 @@ param (
 
 # configuration variables
 $luaVer = "Lua 5.3.6"
-$srcURL = (
-    "https://netactuate.dl.sourceforge.net/project/luabinaries/5.3.6/" +
-    "Docs%20and%20Sources/lua-5.3.6_Sources.zip"
-)
+$srcURL = "https://www.lua.org/ftp/lua-5.3.6.tar.gz"
 
 
 # logging utilities
@@ -53,7 +50,8 @@ function getDirectoryFileCount($dir){
 
 function isUserInRoot(){
     # checks if working dir is project root (i.e. where .git directory exists)
-    return (isFolder ".\.git")
+    $gitPath=".\.git"
+    return ((isFolder $gitPath) -or (isFile $gitPath))
 }
 function downloadLuaSources($srcURL, $tmpZipFile, $srcDir, $incDir){
     # download from source url and extracts
@@ -66,10 +64,11 @@ function downloadLuaSources($srcURL, $tmpZipFile, $srcDir, $incDir){
         return $false
     }
     try{
-        $luaDir = "lua53"
-        Expand-Archive -Path "$tmpZipFile" -DestinationPath "."
-        Move-Item ".\$luaDir\src\*" ".\$srcDir" -Force
-        Move-Item ".\$luaDir\include\*" ".\$incDir" -Force
+        $luaDir = "lua-5.3.6"
+        # TODO: tar command is only available in Windows 10
+        tar -xvzf "$tmpZipFile"
+        Move-Item ".\$luaDir\src\*.c" ".\$srcDir" -Force
+        Move-Item ".\$luaDir\src\*.h*" ".\$incDir" -Force
         Remove-Item ".\$luaDir" -Force -Recurse
     } catch {
         logError "Could not expand archive. Reason:`n $_"; return $false
@@ -145,7 +144,7 @@ ensureDir ".\$srcDir"
 ensureDir ".\$incDir"
 if ((getDirectoryFileCount $srcDir) -eq 0){
     logInfo "`"$srcDir`" directory is empty. Attempt to pull source files..."
-    $zipFile = "lua53-src.zip"
+    $zipFile = "lua53-src.tar.gz"
     $downloadOK = downloadLuaSources "$srcURL" "$zipFile" $srcDir $incDir
     if(-not($downloadOK)){
         logError "Could not download source files. Script will terminate"
@@ -159,19 +158,9 @@ if ((getDirectoryFileCount $srcDir) -eq 0){
 ensureDir ".\dist\$platformID"
 ensureDir ".\lib\$platformID"
 
-# copy include files
-if ((getDirectoryFileCount $incDir) -eq 0){
-    logInfo "Copying include files..."
-    ensureCopy ".\$srcDir\lualib.h" ".\$incDir"
-    ensureCopy ".\$srcDir\lauxlib.h" ".\$incDir"
-    ensureCopy ".\$srcDir\lua.h" ".\$incDir"
-    ensureCopy ".\$srcDir\lua.hpp" ".\$incDir"
-    ensureCopy ".\$srcDir\luaconf.h" ".\$incDir"
-}
-
 # compile with Visual Studio C++ compiler
 logInfo "Compiling $luaVer with MSVC..."
 function absOf($path){return ((Resolve-Path $path).Path)}  # absolute path
-& ".\build_msvc.bat" $vsEnvBat $(absOf $srcDir) $platformID
+& ".\build_msvc.bat" $vsEnvBat $(absOf $srcDir) $(absOf $incDir) $platformID
 
 logSuccess "All files were compiled to platform $platformID"
